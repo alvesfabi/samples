@@ -16,10 +16,10 @@ Handling Sign In:
 1. Display a page where the user can enter their email and password.
 1. If the user submits their credentials (signs in), we must validate the credentials.
 1. Call a Web API to obtain the affiliate number and include this information in the token.
+1. Display a page where the user can enter address and city (this is only for showing how to automated self-asserted steps in Load Testing tool)
 1. Issue an id token.
 
 ## Translating this into custom policies  
-
 
 Handling Sign In:
 
@@ -27,6 +27,7 @@ Handling Sign In:
 1. Use the combined sign in and sign up content definition, which provides this for us.
 1. Run a Validation technical profile to validate the credentials.
 1. Call a web api to obtain the affiliate number.
+1. Call a self-asserted technical profile.
 1. Call a technical profile to issue a token.  
 
 ## Building the custom policy
@@ -154,9 +155,7 @@ To see all the configuration options for an OpenID technical profile, find more 
 
 We have now rendered a sign in page to the user, allowed the user to enter their email and password, and finally validated their credentials.
 
-**Orchestration Step 2** - Skipped as an objectId was output by Orchestration Step 1. This step pertains to sign up.
-
-**Orchestration Step 3** - Read any additional data from the user object.
+**Orchestration Step 2** - Read any additional data from the user object.
 
 We maybe storing additional data the user provided or other data on the user object, which allows your application/service to function correctly.
 
@@ -209,173 +208,132 @@ This technical profile does not state a protocol, therefore is automatically of 
 
 A special case must be noted for the `signInNames.emailAddress`, this references the attribute `signInNames` which is a collection of key value pairs. In this case, we are reading back the `emailAddress` key within the `signInNames` attribute.
 
-**Orchestration Step 4** - Issue an id token.
 
-In most user journeys, the journey will end by issuing an id token back to the application. This orchestration step looks as follows:
+**Orchestration Step 3** - Calls a Web API.
 
-```xml
-<OrchestrationStep Order="4" Type="SendClaims" CpimIssuerTechnicalProfileReferenceId="JwtIssuer" />
-```
-
-The referenced technical profile is as follows:
+This step was added for testing purposes only and to show a way to monitor the api response time using App Insights.
 
 ```xml
-<TechnicalProfile Id="JwtIssuer">
-  <DisplayName>JWT Issuer</DisplayName>
-  <Protocol Name="None" />
-  <OutputTokenFormat>JWT</OutputTokenFormat>
-  <Metadata>
-    <Item Key="client_id">{service:te}</Item>
-    <Item Key="issuer_refresh_token_user_identity_claim_type">objectId</Item>
-    <Item Key="SendTokenResponseBodyWithJsonNumbers">true</Item>
-  </Metadata>
-  <CryptographicKeys>
-    <Key Id="issuer_secret" StorageReferenceId="B2C_1A_TokenSigningKeyContainer" />
-    <Key Id="issuer_refresh_token_key" StorageReferenceId="B2C_1A_TokenEncryptionKeyContainer" />
-  </CryptographicKeys>
-  <InputClaims />
-  <OutputClaims />
-</TechnicalProfile>
-```
-
-This step does not need configuring any further, but find out more [here](https://docs.microsoft.com/en-us/azure/active-directory-b2c/jwt-issuer-technical-profile).
-
-### Handling Sign Up
-
-To handle sign up, we must have one additional orchestration step, which allows the user to provide their email, new password, and name. And upon validating this information, we must write an account to the directory. the other steps are shared with the orchestration steps explained in `Handling Sign in`.
-
-The additional orchestration step is as follows:
-
-```xml
-<OrchestrationStep Order="2" Type="ClaimsExchange">
-  <Preconditions>
-    <Precondition Type="ClaimsExist" ExecuteActionsIf="true">
-      <Value>objectId</Value>
-      <Action>SkipThisOrchestrationStep</Action>
-    </Precondition>
-  </Preconditions>
+<OrchestrationStep Order="3" Type="ClaimsExchange">
   <ClaimsExchanges>
-    <ClaimsExchange Id="SignUpWithLogonEmailExchange" TechnicalProfileReferenceId="LocalAccountSignUpWithLogonEmail" />
+    <ClaimsExchange Id="WebAPIGet" TechnicalProfileReferenceId="WebAPIGet" />
   </ClaimsExchanges>
-</OrchestrationStep>
+</OrchestrationStep>  
 ```
 
-Since orchestration steps run sequentially, we must not run this step if the user is trying to sign in, and only run if the user clicked the sign up link. This is achieved using the **Precondition**. Note that during the sign in phase, the Azure AD B2C claims bag will have an objectId populated after login-NonInteractive has run. Therefore we can use the existence of this claim to skip this step as follows.
+The referenced technical profile is as follows:
+
 
 ```xml
-<Precondition Type="ClaimsExist" ExecuteActionsIf="true">
-    <Value>objectId</Value>
-    <Action>SkipThisOrchestrationStep</Action>
-</Precondition>
-```
-
-When displaying the Combined Sign up and Sign in page, it was mentioned that the metadata of the `SelfAsserted-LocalAccountSignin-Email` technical profile configures an item called `SignUpTarget`. This enables the Sign Up link on the Combined Sign in and Sign up page to call the claims exchange in Orchestration Step 2, which consequently executes the `LocalAccountSignUpWithLogonEmail` technical profile.
-
-The technical profile is designed to capture the email, password, and the name of the user. Then write the account to the directory, as follows:
-
-```xml
-<TechnicalProfile Id="LocalAccountSignUpWithLogonEmail">
-  <DisplayName>Email signup</DisplayName>
-  <Protocol Name="Proprietary" Handler="Web.TPEngine.Providers.SelfAssertedAttributeProvider, Web.TPEngine, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" />
+<TechnicalProfile Id="WebAPIGet">
+  <DisplayName>Test Web API Get method</DisplayName>
+  <Protocol Name="Proprietary" Handler="Web.TPEngine.Providers.RestfulProvider, Web.TPEngine, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" />
   <Metadata>
-    <Item Key="IpAddressClaimReferenceId">IpAddress</Item>
-    <Item Key="ContentDefinitionReferenceId">api.localaccountsignup</Item>
-    <Item Key="language.button_continue">Create</Item>
+    <Item Key="ServiceUrl">[Replace with Web API URL]</Item>
+    <Item Key="AuthenticationType">None</Item>
+    <Item Key="AllowInsecureAuthInProduction">true</Item>
+    <Item Key="SendClaimsIn">QueryString</Item>
+    <Item Key="IncludeClaimResolvingInClaimsHandling">true</Item>          
+    <Item Key="DefaultUserMessageIfRequestFailed">Cannot process your request right now, please try again later.</Item>
   </Metadata>
-  <CryptographicKeys>
-    <Key Id="issuer_secret" StorageReferenceId="B2C_1A_TokenSigningKeyContainer" />
-  </CryptographicKeys>
+  <InputClaimsTransformations>
+    <InputClaimsTransformation ReferenceId="GetPreApiCallDateTime" />
+  </InputClaimsTransformations>
   <InputClaims>
-    <InputClaim ClaimTypeReferenceId="email" />
+    <InputClaim ClaimTypeReferenceId="signInNames.emailAddress" PartnerClaimType="email" />
   </InputClaims>
-  <OutputClaims>
-    <OutputClaim ClaimTypeReferenceId="objectId" />
-    <OutputClaim ClaimTypeReferenceId="email" PartnerClaimType="Verified.Email" Required="true" />
-    <OutputClaim ClaimTypeReferenceId="newPassword" Required="true" />
-    <OutputClaim ClaimTypeReferenceId="reenterPassword" Required="true" />
-    <OutputClaim ClaimTypeReferenceId="executed-SelfAsserted-Input" DefaultValue="true" />
-    <OutputClaim ClaimTypeReferenceId="authenticationSource" />
-    <OutputClaim ClaimTypeReferenceId="newUser" />
-
-    <!-- Optional claims, to be collected from the user -->
-    <OutputClaim ClaimTypeReferenceId="displayName" />
-    <OutputClaim ClaimTypeReferenceId="givenName" />
-    <OutputClaim ClaimTypeReferenceId="surName" />
+  <OutputClaims>             
+    <OutputClaim ClaimTypeReferenceId="affiliateNumber" />        
   </OutputClaims>
-  <ValidationTechnicalProfiles>
-    <ValidationTechnicalProfile ReferenceId="AAD-UserWriteUsingLogonEmail" />
-  </ValidationTechnicalProfiles>
-  <UseTechnicalProfileForSessionManagement ReferenceId="SM-AAD" />
-</TechnicalProfile>
-
-```
-
-|Element name  |Description  |
-|---------|---------|
-|TechnicalProfile Id|Identifier for this technical profile. It is used to find the technical profile that this orchestration step calls.|
-|Metadata|Various configuration options available for a Self-Asserted page.|
-|InputClaims| If an email is sent within the query parameter during the authentication request, it can be pre-populated here.|
-|OutputClaims|This asks the user to provide a verified email (via email verification), password, and names. Other claims are satisfied by the validation technical profile, and therefore not displayed. They are there only such that those claims be available to subsequent steps after this step completes.|
-|ValidationTechnicalProfiles|When the user submits the page, we must validate the users email doesn't already exist, and then write the account to the directory.|
-|UseTechnicalProfileForSessionManagement|References a technical profile to add this step into the session such that during SSO, this step is skipped.|
-
-Azure AD B2C uses a special partner claim type to enforce email verification on a claim, as seen here:
-
-```xml
-<OutputClaim ClaimTypeReferenceId="email" PartnerClaimType="Verified.Email" Required="true" />
-```
-
-Here we are forcing the email claim presented on screen to be verified. Azure AD B2C will therefore render the `Verify` button on the page against this text field, and only allow the user to continue if this field was verified by a code sent to the user's inbox. This technique can be used against any claim name presented to the user as an output claim `(ClaimTypeReferenceId)`.
-
-To see all the configuration options for a Self-Asserted technical profile, find more [here](https://docs.microsoft.com/azure/active-directory-b2c/self-asserted-technical-profile).
-
-When the user submits the page, the Validation technical profile will run, called `AAD-UserWriteUsingLogonEmail`. This is called to attempt to write the account. It is modeled as a Validation Technical profile as this process could fail if the account already exists. This allows an error to be displayed to the screen in such cases.
-
-The `AAD-UserWriteUsingLogonEmail` is as follows:
-
-```xml
-<TechnicalProfile Id="AAD-UserWriteUsingLogonEmail">
-  <Metadata>
-    <Item Key="Operation">Write</Item>
-    <Item Key="RaiseErrorIfClaimsPrincipalAlreadyExists">true</Item>
-  </Metadata>
-  <IncludeInSso>false</IncludeInSso>
-  <InputClaims>
-    <InputClaim ClaimTypeReferenceId="email" PartnerClaimType="signInNames.emailAddress" Required="true" />
-  </InputClaims>
-  <PersistedClaims>
-    <!-- Required claims -->
-    <PersistedClaim ClaimTypeReferenceId="email" PartnerClaimType="signInNames.emailAddress" />
-    <PersistedClaim ClaimTypeReferenceId="newPassword" PartnerClaimType="password"/>
-    <PersistedClaim ClaimTypeReferenceId="displayName" DefaultValue="unknown" />
-    <PersistedClaim ClaimTypeReferenceId="passwordPolicies" DefaultValue="DisablePasswordExpiration" />
-
-    <!-- Optional claims. -->
-    <PersistedClaim ClaimTypeReferenceId="givenName" />
-    <PersistedClaim ClaimTypeReferenceId="surname" />
-  </PersistedClaims>
-  <OutputClaims>
-    <OutputClaim ClaimTypeReferenceId="objectId" />
-    <OutputClaim ClaimTypeReferenceId="newUser" PartnerClaimType="newClaimsPrincipalCreated" />
-    <OutputClaim ClaimTypeReferenceId="authenticationSource" DefaultValue="localAccountAuthentication" />
-    <OutputClaim ClaimTypeReferenceId="userPrincipalName" />
-    <OutputClaim ClaimTypeReferenceId="signInNames.emailAddress" />
-  </OutputClaims>
-  <IncludeTechnicalProfile ReferenceId="AAD-Common" />
-  <UseTechnicalProfileForSessionManagement ReferenceId="SM-AAD" />
+  <OutputClaimsTransformations>
+    <OutputClaimsTransformation ReferenceId="GetPostApiCallDateTime" />
+  </OutputClaimsTransformations>          
 </TechnicalProfile>
 ```
 
-|Element name  |Description  |
-|---------|---------|
-|TechnicalProfile Id|Identifier for this technical profile. It is used to find the technical profile that is referenced elsewhere.|
-|Metadata|This is configured to write to the directory. And to throw an error if the user already exists with an error message.|
-|InputClaims|This is attempting to find a user account with the `email` provided as part of the sign up page - `LocalAccountSignUpWithLogonEmail` technical profile.|
-|PersistedClaims|This section defines which claims are to be written to the account. In this case, it will automatically create the account with this information present.|
-|OutputClaims|We are asking to read these claims from account, which was just written. The Azure AD B2C claims referenced here have the same name as the attribute name in the directory. |
-|IncludeTechnicalProfile|AAD-Common is included to provide the foundational functionality to read or write to the directory.|
+Please replace the ServiceUrl value with the corresponding Url of the Web Api being called for testing.
 
-**Orchestration Step 4** - Issue an id token.
+In this Technical Profile 2 Claims Transformations are being used to obtain the datetime before and after the call to the Web Api, to later be reported to App Insights.
+
+```xml
+<ClaimsTransformation Id="GetPreApiCallDateTime" TransformationMethod="GetCurrentDateTime">
+  <OutputClaims>
+      <OutputClaim ClaimTypeReferenceId="preApiCall" TransformationClaimType="currentDateTime" />
+  </OutputClaims>
+</ClaimsTransformation>            
+<ClaimsTransformation Id="GetPostApiCallDateTime" TransformationMethod="GetCurrentDateTime">
+  <OutputClaims>
+      <OutputClaim ClaimTypeReferenceId="postApiCall" TransformationClaimType="currentDateTime" />
+  </OutputClaims>
+</ClaimsTransformation>
+```
+
+This transformations obtain the current datetime and stores it in a claim.
+
+
+
+**Orchestration Step 4** - Show a Self Asserted Page.
+
+This step was added just to demonstrate how to invoke it from the load testing tool:
+
+```xml
+<OrchestrationStep Order="4" Type="ClaimsExchange" ContentDefinitionReferenceId="api.signuporsignin">
+  <ClaimsExchanges>
+    <ClaimsExchange Id="SelfAssertedCustomStep" TechnicalProfileReferenceId="SelfAsserted-Custom-Step" />
+  </ClaimsExchanges>
+</OrchestrationStep>    
+```
+
+The referenced technical profile is as follows:
+
+```xml
+<TechnicalProfiles>    
+  <TechnicalProfile Id="SelfAsserted-Custom-Step">
+    <DisplayName>SelfAssertedCustom</DisplayName>
+    <Protocol Name="Proprietary" Handler="Web.TPEngine.Providers.SelfAssertedAttributeProvider, Web.TPEngine, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" />
+    <Metadata>
+      <Item Key="ContentDefinitionReferenceId">api.localaccountsignin</Item>
+    </Metadata>
+    <OutputClaims>
+      <OutputClaim ClaimTypeReferenceId="address" Required="true" />
+      <OutputClaim ClaimTypeReferenceId="city" Required="true" />
+    </OutputClaims>
+  </TechnicalProfile>
+```
+
+
+**Orchestration Step 5** - Register telemetry information in App Insights.
+
+This step was added just to demonstrate how to generate telemetry in App Insights:
+
+```xml
+<OrchestrationStep Order="5" Type="ClaimsExchange">
+  <ClaimsExchanges>
+    <ClaimsExchange Id="TrackWebApiTime" TechnicalProfileReferenceId="AppInsights-TrackWebApiTime" />
+  </ClaimsExchanges>
+</OrchestrationStep>   
+```
+
+To understand how to integrate custom policies with App Insights for telemetry read the documentation [here](https://docs.microsoft.com/en-us/azure/active-directory-b2c/analytics-with-application-insights?pivots=b2c-custom-policy).
+
+The referenced technical profile is as follows:
+
+```xml
+<TechnicalProfile Id="AppInsights-TrackWebApiTime">
+  <InputClaims>
+    <InputClaim ClaimTypeReferenceId="EventType" PartnerClaimType="eventName" DefaultValue="WebApiCalled" />
+    <InputClaim ClaimTypeReferenceId="preApiCall" PartnerClaimType="{property:preApiCall}" />
+    <InputClaim ClaimTypeReferenceId="postApiCall" PartnerClaimType="{property:postApiCall}" />
+    <InputClaim ClaimTypeReferenceId="correlationId" PartnerClaimType="{property:correlationId}" />
+    <InputClaim ClaimTypeReferenceId="signInNames.emailAddress" PartnerClaimType="{property:signInNames.emailAddress}" />
+  </InputClaims>
+  <IncludeTechnicalProfile ReferenceId="AppInsights-Common" />
+</TechnicalProfile>      
+```
+Notice that preApiCall, postApiCall and correlationId are added for evaluation purposes.
+
+
+**Orchestration Step 6** - Issue an id token.
 
 In most user journeys, the journey will end by issuing an id token back to the application. This orchestration step looks as follows:
 
@@ -405,36 +363,9 @@ The referenced technical profile is as follows:
 ```
 
 This step does not need configuring any further, but find out more [here](https://docs.microsoft.com/en-us/azure/active-directory-b2c/jwt-issuer-technical-profile).
-
-
-## Relying Party Policy
-
-The relying party file contains the entry point to the User Journey described by the orchestration steps.
-
-```xml
-<RelyingParty>
-    <DefaultUserJourney ReferenceId="SignUpOrSignIn" />
-```
-
-The output claims within the `Relying Party` section define what claims to populate into the token that is issued to the application/relying party.
-
-```xml
-<OutputClaims>
-  <OutputClaim ClaimTypeReferenceId="displayName" />
-  <OutputClaim ClaimTypeReferenceId="givenName" />
-  <OutputClaim ClaimTypeReferenceId="surname" />
-  <OutputClaim ClaimTypeReferenceId="email" />
-  <OutputClaim ClaimTypeReferenceId="objectId" PartnerClaimType="sub"/>
-  <OutputClaim ClaimTypeReferenceId="tenantId" AlwaysUseDefaultValue="true" DefaultValue="{Policy:TenantObjectId}" />
-</OutputClaims>
-```
-
-The output claims listed here must be output by at least one of the technical profiles called by the user journey, otherwise the file will not upload successfully.
-
-Since some steps can be skipped during a particular flow, these may not always be present in the token.
 
 ## Summary
 
-By reducing the user experience to a set of logical steps, we have translated these to a set of Orchestration Steps within an Azure AD B2C policy. These orchestration steps then implement the functionality of each logical step by allowing the user to interact with pages and validate various information. Finally we issue an id token back to the application.
+The set of steps implemented in this policy are to demonstrate how to implement a Load Test using Azure Load Testing Service.
 
 

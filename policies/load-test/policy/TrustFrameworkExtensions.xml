@@ -93,7 +93,6 @@
             <OutputClaim ClaimTypeReferenceId="preApiCall" TransformationClaimType="currentDateTime" />
         </OutputClaims>
       </ClaimsTransformation>            
-
       <ClaimsTransformation Id="GetPostApiCallDateTime" TransformationMethod="GetCurrentDateTime">
         <OutputClaims>
             <OutputClaim ClaimTypeReferenceId="postApiCall" TransformationClaimType="currentDateTime" />
