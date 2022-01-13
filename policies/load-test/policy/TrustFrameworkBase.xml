@@ -671,6 +671,10 @@
           <Metadata>
             <Item Key="SignUpTarget">SignUpWithLogonEmailExchange</Item>
             <Item Key="setting.operatingMode">Email</Item>
+            <Item Key="setting.showCancelButton">false</Item>
+            <Item Key="setting.showSignupLink ">false</Item>
+            <Item Key="setting.forgotPasswordLinkLocation">none</Item>
+            <Item Key="setting.enableRememberMe ">false</Item>
             <Item Key="ContentDefinitionReferenceId">api.localaccountsignin</Item>
           </Metadata>
           <IncludeInSso>false</IncludeInSso>
