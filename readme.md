@@ -31,6 +31,7 @@ Samples are available for the following categories
 - [User Migration](#user-migration)
 - [UserInfo Endpoint](#userinfo-endpoint)
 - [Web Test](#web-test)
+- [Load Test](#load-test)
 - [CI / CD](#cicd)
 
 ## Password management
@@ -168,6 +169,10 @@ Samples are available for the following categories
 ## Web Test
 
 - [SignIn Web test](policies/signin-webtest) - This sample web test shows how to run tests and monitor results of B2C sign in's, using Azure Application Insights.
+
+## Load Test
+
+- [Load test](policies/load-test) - This sample load test shows how to run load testing using Azure Load Testing Service and evaluate results of B2C custom policies performance, using Azure Application Insights.
 
 ## CI/CD
 
