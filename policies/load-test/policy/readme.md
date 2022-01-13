@@ -5,7 +5,13 @@ This article gives an overview of the **local account sign-in with rest api vali
 
 You can find the user journey and its orchestration steps in the TrustFrameworkBase.xml file, with the Id "SignUpOrSignIn". Each Orchestration step and its referenced technical profile will be explained in detail in the following series.
 
+## Set Up
 
+Replace tenant name in all policy files (replace yourtenant with corresponding tenant name).
+
+Replace ProxyIdentityExperienceFrameworkAppId and IdentityExperienceFrameworkAppId with the corresponding values for your tenant.
+
+To understand how to obtain these values please refer to the documentation [here](https://docs.microsoft.com/en-us/azure/active-directory-b2c/custom-policy-overview#prepare-your-environment).
 
 ## Logical Steps
 
